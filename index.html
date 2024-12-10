@@ -28,13 +28,16 @@
         <h1>Final Grade Calculator</h1>
         <p>Enter your grades below, and click "Calculate" to see your final grade:</p>
         <form id="gradeForm">
+            <label for="homework">Homework Grades (comma-separated, out of 100):</label>
+            <input type="text" id="homework" name="homework" placeholder="e.g., 80, 90, 70, 100" required>
+            
             <label for="exam1">Exam 1 Grade (out of 100):</label>
             <input type="number" id="exam1" name="exam1" min="0" max="100" required>
             
             <label for="exam2">Exam 2 Grade (out of 100):</label>
             <input type="number" id="exam2" name="exam2" min="0" max="100" required>
             
-            <label for="exam3">Exam 3 Grade  (out of 100):</label>
+            <label for="exam3">Exam 3 Grade (out of 100):</label>
             <input type="number" id="exam3" name="exam3" min="0" max="100" required>
             
             <label for="finalExam">Final Exam Grade (out of 100):</label>
@@ -48,20 +51,30 @@
     <script>
         function calculateGrade() {
             // Get grades from input fields
+            const homework = document.getElementById('homework').value.split(',').map(Number);
             const exam1 = parseFloat(document.getElementById('exam1').value) || 0;
             const exam2 = parseFloat(document.getElementById('exam2').value) || 0;
             const exam3 = parseFloat(document.getElementById('exam3').value) || 0;
             const finalExam = parseFloat(document.getElementById('finalExam').value) || 0;
 
-            // Weighting logic
-            const finalExamReplacesLowest = Math.max(
-                (exam1 + exam2 + exam3 + finalExam - Math.min(exam1, exam2, exam3)) / 3,
-                (exam1 + exam2 + exam3) / 3
-            );
-            
-            const finalGrade = (finalExamReplacesLowest + finalExam) / 2; // Adjust weight logic as needed
-            
-            // Determine letter grade
+            // Calculate Homework Average w/out Lowest Two Grades
+            homework.sort((a, b) => a - b); // Sort grades ascending
+            const filteredHomework = homework.slice(2); // Remove the lowest two grades
+            const homeworkAverage = filteredHomework.reduce((sum, grade) => sum + grade, 0) / filteredHomework.length || 0;
+
+            // Replace the lowest exam grade with the final exam if higher
+            const lowestExam = Math.min(exam1, exam2, exam3);
+            const adjustedExams = [exam1, exam2, exam3].map(grade => (grade === lowestExam && finalExam > grade ? finalExam : grade));
+            const examAverage = adjustedExams.reduce((sum, grade) => sum + grade, 0) / adjustedExams.length;
+
+            // Calculate Final Grade
+            const finalGrade = (homeworkAverage * 0.25) +
+                               (exam1 * 0.20) +
+                               (exam2 * 0.20) +
+                               (exam3 * 0.20) +
+                               (finalExam * 0.15);
+
+            // Determine Letter Grade
             let letterGrade = '';
             if (finalGrade >= 90) {
                 letterGrade = 'A';
