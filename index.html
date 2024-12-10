@@ -21,27 +21,36 @@
             margin-top: 20px;
             font-weight: bold;
         }
+        .disabled {
+            background-color: #f0f0f0;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Final Grade Calculator</h1>
-        <p>Enter your grades below, and click "Calculate" to see your final grade:</p>
+        <p>Enter your grades below as they appear on Blackboard, and click "Calculate" to see your final grade.</p>
+        <p>Do not manually substitute grades or you will get the wrong answer. Just input grades as they show in Blackboard. The algorithm will drop the lowest two homeworks and apply all the necessary weights and calculations.</p>
+        <p>You can enter each homework grade or you can enter the homework average grade posted on Blackboard (if it is already posted).</p>
         <form id="gradeForm">
-            <label for="homework">Homework Grades (comma-separated, out of 100):</label>
-            <input type="text" id="homework" name="homework" placeholder="e.g., 80, 90, 70, 100" required>
+            <label for="homework">Enter Homework Grades (Use the homework total grade for each homework and separate the grades with commas.):</label>
+            <input type="text" id="homework" name="homework" placeholder="e.g., 80, 90, 70, 100" oninput="toggleInput('homework')">
             
-            <label for="exam1">Exam 1 Grade (out of 100):</label>
-            <input type="number" id="exam1" name="exam1" min="0" max="100" required>
+            <label for="homeworkAverage">Or Enter Homework Average (Posted as 'Avg. Hmk (w/out two lowest grades)' on Blackboard) :</label>
+            <input type="number" id="homeworkAverage" name="homeworkAverage" min="0" max="120" oninput="toggleInput('homeworkAverage')">
+
+            <label for="exam1">Exam 1 Total Grade:</label>
+            <input type="number" id="exam1" name="exam1" min="0" max="120" required>
             
-            <label for="exam2">Exam 2 Grade (out of 100):</label>
-            <input type="number" id="exam2" name="exam2" min="0" max="100" required>
+            <label for="exam2">Exam 2 Total Grade:</label>
+            <input type="number" id="exam2" name="exam2" min="0" max="120" required>
             
-            <label for="exam3">Exam 3 Grade (out of 100):</label>
-            <input type="number" id="exam3" name="exam3" min="0" max="100" required>
+            <label for="exam3">Exam 3 Total Grade:</label>
+            <input type="number" id="exam3" name="exam3" min="0" max="120" required>
             
-            <label for="finalExam">Final Exam Grade (out of 100):</label>
-            <input type="number" id="finalExam" name="finalExam" min="0" max="100" required>
+            <label for="finalExam">Final Exam Total Grade:</label>
+            <input type="number" id="finalExam" name="finalExam" min="0" max="120" required>
             
             <button type="button" onclick="calculateGrade()">Calculate</button>
         </form>
@@ -49,32 +58,57 @@
     </div>
 
     <script>
+        function toggleInput(activeField) {
+            const homeworkField = document.getElementById('homework');
+            const homeworkAverageField = document.getElementById('homeworkAverage');
+            
+            if (activeField === 'homework' && homeworkField.value.trim() !== '') {
+                homeworkAverageField.disabled = true;
+                homeworkAverageField.classList.add('disabled');
+            } else if (activeField === 'homeworkAverage' && homeworkAverageField.value.trim() !== '') {
+                homeworkField.disabled = true;
+                homeworkField.classList.add('disabled');
+            } else {
+                homeworkField.disabled = false;
+                homeworkAverageField.disabled = false;
+                homeworkField.classList.remove('disabled');
+                homeworkAverageField.classList.remove('disabled');
+            }
+        }
+
         function calculateGrade() {
             // Get grades from input fields
-            const homework = document.getElementById('homework').value.split(',').map(Number);
+            const homeworkInput = document.getElementById('homework').value.trim();
+            const homeworkAverageInput = parseFloat(document.getElementById('homeworkAverage').value) || 0;
             const exam1 = parseFloat(document.getElementById('exam1').value) || 0;
             const exam2 = parseFloat(document.getElementById('exam2').value) || 0;
             const exam3 = parseFloat(document.getElementById('exam3').value) || 0;
             const finalExam = parseFloat(document.getElementById('finalExam').value) || 0;
 
-            // Calculate Homework Average w/out Lowest Two Grades
-            homework.sort((a, b) => a - b); // Sort grades ascending
-            const filteredHomework = homework.slice(2); // Remove the lowest two grades
-            const homeworkAverage = filteredHomework.reduce((sum, grade) => sum + grade, 0) / filteredHomework.length || 0;
+            // Calculate Homework Average
+            let homeworkAverage = 0;
+
+            if (homeworkInput) {
+                const homeworkGrades = homeworkInput.split(',').map(Number);
+                homeworkGrades.sort((a, b) => a - b); // Sort grades ascending
+                const filteredHomework = homeworkGrades.slice(2); // Remove the lowest two grades
+                homeworkAverage = filteredHomework.reduce((sum, grade) => sum + grade, 0) / filteredHomework.length || 0;
+            } else if (homeworkAverageInput > 0) {
+                homeworkAverage = homeworkAverageInput;
+            }
 
             // Replace the lowest exam grade with the final exam if higher
             const lowestExam = Math.min(exam1, exam2, exam3);
             const adjustedExams = [exam1, exam2, exam3].map(grade => (grade === lowestExam && finalExam > grade ? finalExam : grade));
-            const examAverage = adjustedExams.reduce((sum, grade) => sum + grade, 0) / adjustedExams.length;
 
-            // Calculate Final Grade
+            // Calculate weighted final grade
             const finalGrade = (homeworkAverage * 0.25) +
-                               (exam1 * 0.20) +
-                               (exam2 * 0.20) +
-                               (exam3 * 0.20) +
+                               (adjustedExams[0] * 0.20) +
+                               (adjustedExams[1] * 0.20) +
+                               (adjustedExams[2] * 0.20) +
                                (finalExam * 0.15);
 
-            // Determine Letter Grade
+            // Determine letter grade
             let letterGrade = '';
             if (finalGrade >= 90) {
                 letterGrade = 'A';
